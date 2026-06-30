@@ -41,6 +41,16 @@ yarn-error.log*
 # Do NOT commit files containing real credentials
 **/credentials*.json
 
+# Local n8n workflow export with real credentials
+# Use the template version (ticket-workflow.template.json) instead
+workflow/7x24小时ai工单分诊自动化工作流.json
+
+# ====================
+# Testing
+# ====================
+# Apifox export (local testing tool, contains localhost URLs)
+n8n测试.apifox.json
+
 # ====================
 # IDE & Editor
 # ====================

@@ -8,6 +8,7 @@
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
     <img src="https://img.shields.io/badge/status-production%20ready-brightgreen" alt="Status">
     <img src="https://img.shields.io/badge/AI-LLM%20Powered-purple?logo=openai" alt="AI">
+    <img src="https://img.shields.io/badge/security-template%20based-green" alt="Security">
   </p>
 </div>
 
@@ -109,51 +110,72 @@
    cd ai-ticket-system
    ```
 
-2. **导入工作流**
+2. **准备工作流**
+   - 复制模板文件并重命名（或直接使用模板导入后编辑占位符）：
+   ```bash
+   cp workflow/ticket-workflow.template.json workflow/my-ticket-workflow.json
+   ```
    - 打开 n8n 管理界面
    - 进入 **Workflows** → **Import from File**
-   - 选择 `workflow/7x24小时ai工单分诊自动化工作流.json`
+   - 选择你的工作流文件
 
-3. **配置凭证 | Configure Credentials**
-   - 🔑 **OpenAI API** — 配置 LLM 模型 API Key
-   - 📧 **SMTP** — 配置发件邮箱
-   - 🔐 **Header Auth** — 配置 Webhook 鉴权
-   - 🌐 **飞书** — 配置飞书应用凭证 (app_id / app_secret)
+3. **替换占位符 | Replace Placeholders**
+   - 工作流模板中的 `{{YOUR_XXX}}` 占位符需要替换为你的真实凭证
+   - 参考 [.env.example](.env.example) 了解每个配置项的说明：
+     - 🔑 **OpenAI / LLM API** — 凭证 ID
+     - 📧 **SMTP** — 发件邮箱配置
+     - 🔐 **Header Auth** — Webhook 鉴权
+     - 🌐 **飞书** — 应用凭证 + 表格/群聊 ID
+     - 📚 **RagFlow** — API Key + 数据集 ID
 
 4. **激活工作流**
    - 点击 **Active** 按钮启用工作流
    - 复制 Webhook 生产 URL
 
-### 测试数据 | Test Data
+### 🔒 关于凭证安全 | About Credential Security
 
-```json
-// 紧急工单 - 触发紧急通知
-{
-    "source": "网站表单",
-    "customer_name": "南哥",
-    "customer_email": "test@example.com",
-    "issue_title": "支付问题",
-    "issue_description": "我支付成功了但是订单没有更新，这让我很着急！"
-}
+> ⚠️ **工作流 JSON 文件中不应包含真实凭证！**
+>
+> 本仓库提供的是 `workflow/ticket-workflow.template.json`（所有凭证已替换为占位符），你的本地工作流文件（含真实凭证）已通过 `.gitignore` 排除，不会被提交到 GitHub。
+>
+> 如需在 n8n 中使用，建议：
+> 1. 导入模板文件到 n8n
+> 2. 在 n8n 界面中创建和管理凭证（Credentials）
+> 3. 在工作流编辑器中直接选择已创建的凭证
+>
+> 详细凭证说明见 [.env.example](.env.example)。
 
-// 常规工单 - 进入等待队列
-{
-    "source": "网站表单",
-    "customer_name": "南哥",
-    "customer_email": "test@example.com",
-    "issue_title": "技术问题",
-    "issue_description": "发现状态更新不及时，不过这不是很重要。"
-}
+---
 
-// 自动回复 - AI 直接回复
-{
-    "source": "网站表单",
-    "customer_name": "南哥",
-    "customer_email": "test@example.com",
-    "issue_title": "普通问题",
-    "issue_description": "如何进行支付。"
-}
+## 🧪 测试 | Testing
+
+项目提供了两种测试方式：
+
+### 方式 1：批量测试脚本（推荐）
+
+```bash
+# 设置你的 n8n Webhook 地址
+export N8N_WEBHOOK_URL=http://localhost:5678/webhook-test/你的webhookID
+export N8N_AUTH_HEADER=你的认证头
+
+# 一键运行所有测试用例
+bash tests/run-tests.sh
 ```
+
+### 方式 2：Apifox 可视化测试
+
+> 项目提供了 Apifox 导出文件 `n8n测试.apifox.json`（位于项目根目录，已被 .gitignore 排除）
+
+### 测试覆盖场景
+
+| 场景 | 文件 | 预期触发分支 |
+|------|------|-------------|
+| 🚨 紧急工单 - 支付问题 | `tests/case-urgent.json` | 紧急 → 飞书通知 + AI 方案 |
+| 📋 常规工单 - 技术问题 | `tests/case-normal.json` | 常规 → 等待 2h + 通知 |
+| 🤖 自动回复 - 普通咨询 | `tests/case-auto-reply.json` | 自动回复 → 知识库 + 邮件 |
+| ⚠️ 空字段边界 | `tests/case-edge-empty.json` | 容错处理 |
+| ⚠️ 超长文本边界 | `tests/case-edge-long-text.json` | 大数据量处理 |
+| 😤 情绪激动边界 | `tests/case-edge-emotional.json` | 应触达紧急分支 |
 
 ---
 
@@ -207,11 +229,24 @@ SMTP 服务器: smtp.163.com
 
 ```
 ai-ticket-system/
-├── README.md                          # 项目说明文档
-├── img.png                            # 工作流架构图
-├── .gitignore                         # Git 忽略配置
-└── workflow/
-    └── 7x24小时ai工单分诊自动化工作流.json  # n8n 工作流导出文件
+├── README.md                               # 项目说明文档
+├── .gitignore                              # Git 忽略配置
+├── .env.example                            # 环境变量模板（凭证说明）
+├── img.png                                 # 工作流架构图
+├── workflow/
+│   ├── ticket-workflow.template.json       # [推送到Git] 脱敏的工作流模板
+│   └── 7x24小时ai工单分诊自动化工作流.json  # [本地] 含真实凭证，被 gitignore
+├── tests/                                  # 轻量测试方案
+│   ├── README.md                           # 测试使用说明
+│   ├── run-tests.sh                        # 批量测试脚本 (curl)
+│   ├── case-urgent.json                    # 测试用例：紧急工单
+│   ├── case-normal.json                    # 测试用例：常规工单
+│   ├── case-auto-reply.json                # 测试用例：自动回复
+│   ├── case-edge-empty.json                # 边界测试：空字段
+│   ├── case-edge-long-text.json            # 边界测试：超长文本
+│   └── case-edge-emotional.json            # 边界测试：情绪激动
+└── scripts/
+    └── generate_template.py                # 模板生成脚本
 ```
 
 ---

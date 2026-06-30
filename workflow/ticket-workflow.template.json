@@ -21,8 +21,8 @@
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "gg9OGckxEDin7Mbe",
-          "name": "OpenAI account"
+          "id": "{{YOUR_OPENAI_CREDENTIAL_ID}}",
+          "name": "{{YOUR_OPENAI_CREDENTIAL_NAME}}"
         }
       }
     },
@@ -41,12 +41,12 @@
       ],
       "id": "c950e0e0-5f90-4340-9b64-59718fadf0da",
       "name": "接收POST请求",
-      "webhookId": "107f44d8-9d03-4ea0-935f-c55e5a917b62",
+      "webhookId": "{{YOUR_WEBHOOK_ID}}",
       "notesInFlow": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "6HrsSEkrDEUmIYzH",
-          "name": "Header Auth account"
+          "id": "{{YOUR_HEADER_AUTH_CREDENTIAL_ID}}",
+          "name": "{{YOUR_HEADER_AUTH_CREDENTIAL_NAME}}"
         }
       },
       "notes": "用户反馈的工单"
@@ -190,8 +190,8 @@
       "name": "OpenAI Chat Model1",
       "credentials": {
         "openAiApi": {
-          "id": "gg9OGckxEDin7Mbe",
-          "name": "OpenAI account"
+          "id": "{{YOUR_OPENAI_CREDENTIAL_ID}}",
+          "name": "{{YOUR_OPENAI_CREDENTIAL_NAME}}"
         }
       }
     },
@@ -204,7 +204,7 @@
         "jsonHeaders": "{\n  \"Content-Type\":\"application/json; charset=utf-8\"\n}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n    \"app_id\": \"cli_aaacc610f03a1ccd\",\n    \"app_secret\": \"C6ljehkoTpn5L63zwutHi7XabaWYzBgn\"\n}",
+        "jsonBody": "{\n    \"app_id\": \"{{YOUR_FEISHU_APP_ID}}\",\n    \"app_secret\": \"{{YOUR_FEISHU_APP_SECRET}}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -276,7 +276,7 @@
       ],
       "id": "7f9786af-cfdb-4372-85cf-5ed09ff8cc44",
       "name": "等待2小时",
-      "webhookId": "2f518e86-df14-4104-afe9-4652cbbd1818"
+      "webhookId": "{{YOUR_WAIT_WEBHOOK_ID}}"
     },
     {
       "parameters": {
@@ -342,7 +342,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n    \"receive_id\":\"oc_16172b556a1feeb6879b78593e3ae33d\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"紧急工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**AI提供的解决方案(仅供参考)**\\\\\\n {{ $('压缩并转义').item.json.compressedContent.toJsonString().slice(1, -1) }}\\\"},{\\\"tag\\\":\\\"a\\\",\\\"href\\\":\\\"https://nangeai.top\\\",\\\"text\\\":\\\"nangeai.top\\\"}]]}}\"\n} ",
+        "jsonBody": "={\n    \"receive_id\":\"{{YOUR_FEISHU_CHAT_ID}}\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"紧急工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**AI提供的解决方案(仅供参考)**\\\\\\n {{ $('压缩并转义').item.json.compressedContent.toJsonString().slice(1, -1) }}\\\"},{\\\"tag\\\":\\\"a\\\",\\\"href\\\":\\\"https://nangeai.top\\\",\\\"text\\\":\\\"nangeai.top\\\"}]]}}\"\n} ",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -361,13 +361,13 @@
             {
               "id": "c5d06deb-33dc-471e-8892-bbf2bb8c94f5",
               "name": "app_token",
-              "value": "M4vPb58JRai48rsuqptc0fsfnFd",
+              "value": "{{YOUR_FEISHU_APP_TOKEN}}",
               "type": "string"
             },
             {
               "id": "1817ab91-0b11-40ed-b13e-2d8367d99638",
               "name": "table_id",
-              "value": "tbl2I41w7cP7bUrt",
+              "value": "{{YOUR_FEISHU_TABLE_ID}}",
               "type": "string"
             },
             {
@@ -485,7 +485,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n    \"receive_id\":\"oc_16172b556a1feeb6879b78593e3ae33d\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"常规工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}]]}}\"\n} ",
+        "jsonBody": "={\n    \"receive_id\":\"{{YOUR_FEISHU_CHAT_ID}}\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"常规工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}]]}}\"\n} ",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -499,8 +499,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "364069771@qq.com",
-        "toEmail": "yb364069771@gmail.com",
+        "fromEmail": "{{YOUR_SMTP_FROM_EMAIL}}",
+        "toEmail": "{{YOUR_SMTP_TO_EMAIL}}",
         "subject": "工单回复",
         "html": "={{ $json.output }}",
         "options": {
@@ -518,8 +518,8 @@
       "webhookId": "9e2edde1-ecfc-4f62-89ea-6de7474104fd",
       "credentials": {
         "smtp": {
-          "id": "J2SqCJ75kufiqXQa",
-          "name": "SMTP account"
+          "id": "{{YOUR_SMTP_CREDENTIAL_ID}}",
+          "name": "{{YOUR_SMTP_CREDENTIAL_NAME}}"
         }
       }
     },
@@ -532,13 +532,13 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "ragflow-bYw6Y5nzZzZJ-Z59Zu2SvMfoQlm738CjhYHGETnnS6k"
+              "value": "{{YOUR_RAGFLOW_API_KEY}}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"dataset_ids\": [\n    \"fcc34ecc68c311f1827a9b6ee29d737f\"\n  ],\n  \"question\": \"{{ $json.originalData.issue_title }} {{ $json.originalData.issue_description }}\",\n  \"top_k\": 5,\n  \"similarity_threshold\": 0.3,\n  \"page\": 1,\n  \"page_size\": 10\n}",
+        "jsonBody": "={\n  \"dataset_ids\": [\n    \"{{YOUR_RAGFLOW_DATASET_ID}}\"\n  ],\n  \"question\": \"{{ $json.originalData.issue_title }} {{ $json.originalData.issue_description }}\",\n  \"top_k\": 5,\n  \"similarity_threshold\": 0.3,\n  \"page\": 1,\n  \"page_size\": 10\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -598,8 +598,8 @@
       "name": "OpenAI Chat Model3",
       "credentials": {
         "openAiApi": {
-          "id": "gg9OGckxEDin7Mbe",
-          "name": "OpenAI account"
+          "id": "{{YOUR_OPENAI_CREDENTIAL_ID}}",
+          "name": "{{YOUR_OPENAI_CREDENTIAL_NAME}}"
         }
       }
     },
@@ -904,11 +904,11 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "f6c0c4fb-bc37-4610-afe3-863f452a8d28",
+  "versionId": "{{VERSION_ID}}",
   "meta": {
-    "instanceId": "70b618c5c2521d53f3b69ab3ec344920ef7142dda7d15d239ec6ff5dba2ea8d5"
+    "instanceId": "{{N8N_INSTANCE_ID}}"
   },
   "nodeGroups": [],
-  "id": "4USYBcOdfLHL0fTp",
+  "id": "{{WORKFLOW_ID}}",
   "tags": []
 }
