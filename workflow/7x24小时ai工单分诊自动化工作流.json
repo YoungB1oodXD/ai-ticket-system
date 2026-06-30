@@ -1,0 +1,914 @@
+{
+  "name": "7x24小时ai工单分诊自动化工作流",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen-max",
+          "mode": "list",
+          "cachedResultName": "qwen-max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        592
+      ],
+      "id": "8ec3ea26-4654-450c-9626-6ae48be4ac72",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "gg9OGckxEDin7Mbe",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "107f44d8-9d03-4ea0-935f-c55e5a917b62",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1248,
+        384
+      ],
+      "id": "c950e0e0-5f90-4340-9b64-59718fadf0da",
+      "name": "接收POST请求",
+      "webhookId": "107f44d8-9d03-4ea0-935f-c55e5a917b62",
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "6HrsSEkrDEUmIYzH",
+          "name": "Header Auth account"
+        }
+      },
+      "notes": "用户反馈的工单"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n  const aiAnalysis = $input.first().json.output;\n  const originalData = $('接收POST请求').first().json.body;\n\n  // 校验\n  const validCategories = ['billing', 'technical', 'feature_request', 'bug', 'general'];\n  const validUrgencies = ['critical', 'high', 'medium', 'low'];\n  const category = validCategories.includes(aiAnalysis.category) ? aiAnalysis.category : 'general';\n  const urgency = validUrgencies.includes(aiAnalysis.true_urgency) ? aiAnalysis.true_urgency : 'medium';\n\n  // 决策逻辑（三层）\n  let action = 'normal';\n  let actionReason = '';\n\n  // 第一层：紧急\n  if (aiAnalysis.requires_immediate_human_intervention ||\n      urgency === 'critical' ||\n      (urgency === 'high' && category !== 'general') ||\n      aiAnalysis.sentiment === 'angry') {\n    action = 'urgent';\n    actionReason = '紧急情况，需要人工立即介入';\n\n  // 第二层：可以自动回复\n  } else if (aiAnalysis.can_be_auto_replied === true) {\n    action = 'auto_reply';\n    actionReason = '常规咨询，AI自动回复即可';\n\n  // 第三层：常规\n  } else {\n    action = 'normal';\n    actionReason = '常规工单，待人工处理';\n  }\n\n  return [{\n    json: {\n      originalData,\n      aiAnalysis: {\n        ...aiAnalysis,\n        category,\n        true_urgency: urgency\n      },\n      received_at: new Date().toISOString(),\n      ticket_id: 'TKT' + Date.now().toString(36).toUpperCase(),\n      action_required: action,\n      action_reason: actionReason\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        384
+      ],
+      "id": "eebbbec1-f980-46a3-911f-8fe484a990ab",
+      "name": "综合决策处理"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_required }}",
+                    "rightValue": "urgent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c4103d18-50ad-4545-82eb-515c939aa0bb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "紧急分支"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a62dfac5-37fe-4fab-8ec1-a2a520fe95d9",
+                    "leftValue": "={{ $json.action_required }}",
+                    "rightValue": "normal",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "常规处理"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f02f13af-50bf-4694-b263-3853d382f560",
+                    "leftValue": "={{ $json.action_required }}",
+                    "rightValue": "auto_reply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "自动回复"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -320,
+        368
+      ],
+      "id": "25dc95c7-f57d-49dd-ab63-c8e75eb03fec",
+      "name": "条件分支"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=作为技术支持专家，请为这个紧急问题提供立即行动方案：\n\n  问题：{{ $json.originalData.issue_title }}\n  详细描述：{{ $json.originalData.issue_description }}\n  问题类型：{{ $json.aiAnalysis.category }}\n  客户情绪：{{ $json.aiAnalysis.sentiment }}\n\n  请提供：\n  1. 立即检查项（3个最重要的系统检查点）\n  2. 临时解决方案（如果可以立即实施）\n  3. 与客户沟通的关键话术\n  4. 需要通知的团队或人员\n重要约束：回答控制在 100 字以内，只写要点，不要表格、不要话术、不要分步骤。\n用纯文字，不要任何 markdown 表格和 emoji 表情符号。\n用清晰的markdown格式回复。",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dca01e2b-edbf-4114-878a-8b69ffb44d6e",
+      "name": "AI解决方案生成"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen-max",
+          "mode": "list",
+          "cachedResultName": "qwen-max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        192
+      ],
+      "id": "911615fe-89ab-4c94-aa45-5145879148d0",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "gg9OGckxEDin7Mbe",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\":\"application/json; charset=utf-8\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n    \"app_id\": \"cli_aaacc610f03a1ccd\",\n    \"app_secret\": \"C6ljehkoTpn5L63zwutHi7XabaWYzBgn\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1040,
+        384
+      ],
+      "id": "74d35ab2-7469-4220-a810-151892d21773",
+      "name": "获取飞书Token",
+      "notesInFlow": true,
+      "notes": "获取飞书token"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e0d95449-c9e7-4635-97ac-3700d4a5fb04",
+              "name": "auto_replied",
+              "value": "待处理",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        384
+      ],
+      "id": "11a6bb18-83ec-49e5-b85f-c2d2cd3ba946",
+      "name": "处理状态:待处理"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e0d95449-c9e7-4635-97ac-3700d4a5fb04",
+              "name": "auto_replied",
+              "value": "已自动回复",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        672
+      ],
+      "id": "7be33f60-08c7-4e23-b0aa-40cf6191f232",
+      "name": "处理状态:已自动回复"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        384
+      ],
+      "id": "7f9786af-cfdb-4372-85cf-5ed09ff8cc44",
+      "name": "等待2小时",
+      "webhookId": "2f518e86-df14-4104-afe9-4652cbbd1818"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://open.feishu.cn/open-apis/bitable/v1/apps/{{ $json.app_token }}/tables/{{ $json.table_id }}/records",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('获取飞书Token').item.json.tenant_access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    \"工单ID\": {{ $json.ticket_id.toJsonString() }},\n    \"接收时间\": {{ $json.received_at.toJsonString() }},\n    \"客户姓名\": {{ $json.customer_name.toJsonString() }},\n    \"客户邮箱\": {{ $json.customer_email.toJsonString() }},\n    \"问题标题\": {{ $json.issue_title.toJsonString() }},\n    \"问题分类\": {{ $json.category.toJsonString() }},\n    \"AI问题摘要\": {{ $json.summary.toJsonString() }},\n    \"问题描述\": {{ $json.issue_description.toJsonString() }},\n    \"紧急程度\": {{ $json.true_urgency.toJsonString() }},\n    \"处理状态\": {{ $json.auto_replied.toJsonString() }},\n    \"情感分析\": {{ $json.sentiment.toJsonString() }},\n    \"工单来源\": {{ $json.source.toJsonString() }}\n  }\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        384
+      ],
+      "id": "2937734a-c1c7-425d-a0c5-c74e359f71cc",
+      "name": "新增记录到表格"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 假设输入数据为 items[0].json.content\nconst content = $input.first().json.output;\n\n// 1. 去除首尾空白\n// 2. 替换所有换行符为 \\\\n\n// 3. 替换所有制表符为一个空格（可选，根据需要）\nconst compressed = content.trim().replace(/\\n/g, '\\\\n').replace(/\\t/g, ' ');\n\nreturn [\n  {\n    json: {\n      compressedContent: compressed\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        0
+      ],
+      "id": "13ae4eee-a51b-4862-bccc-eda8f7a72718",
+      "name": "压缩并转义"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.feishu.cn/open-apis/im/v1/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "receive_id_type",
+              "value": "chat_id"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('获取飞书Token').item.json.tenant_access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"receive_id\":\"oc_16172b556a1feeb6879b78593e3ae33d\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"紧急工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**AI提供的解决方案(仅供参考)**\\\\\\n {{ $('压缩并转义').item.json.compressedContent.toJsonString().slice(1, -1) }}\\\"},{\\\"tag\\\":\\\"a\\\",\\\"href\\\":\\\"https://nangeai.top\\\",\\\"text\\\":\\\"nangeai.top\\\"}]]}}\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        0
+      ],
+      "id": "ffb65c73-295b-4a1b-a90a-89c383069e9f",
+      "name": "向群组发送紧急工单信息"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5d06deb-33dc-471e-8892-bbf2bb8c94f5",
+              "name": "app_token",
+              "value": "M4vPb58JRai48rsuqptc0fsfnFd",
+              "type": "string"
+            },
+            {
+              "id": "1817ab91-0b11-40ed-b13e-2d8367d99638",
+              "name": "table_id",
+              "value": "tbl2I41w7cP7bUrt",
+              "type": "string"
+            },
+            {
+              "id": "d69d6ef0-89ad-4ee9-805e-81f49d759414",
+              "name": "source",
+              "value": "={{ $('条件分支').item.json.originalData.source }}",
+              "type": "string"
+            },
+            {
+              "id": "f1fcbcbf-15c8-4a86-ad0e-22fb36709a9c",
+              "name": "customer_name",
+              "value": "={{ $('条件分支').item.json.originalData.customer_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d232f160-5d6f-4447-ad2e-25094f16707c",
+              "name": "customer_email",
+              "value": "={{ $('条件分支').item.json.originalData.customer_email }}",
+              "type": "string"
+            },
+            {
+              "id": "d4ebf2cc-82ce-4018-94fd-d007011b1724",
+              "name": "issue_title",
+              "value": "={{ $('条件分支').item.json.originalData.issue_title }}",
+              "type": "string"
+            },
+            {
+              "id": "5e6ecc5f-9190-4c1a-9a02-c2099dd2c1f9",
+              "name": "issue_description",
+              "value": "={{ $('条件分支').item.json.originalData.issue_description }}",
+              "type": "string"
+            },
+            {
+              "id": "327ebedf-2783-4f36-8c6f-af478e02fcd8",
+              "name": "sentiment",
+              "value": "={{ $('条件分支').item.json.aiAnalysis.sentiment }}",
+              "type": "string"
+            },
+            {
+              "id": "4619f12a-a8f7-4265-86f6-e8b96b19016b",
+              "name": "true_urgency",
+              "value": "={{ $('条件分支').item.json.aiAnalysis.true_urgency }}",
+              "type": "string"
+            },
+            {
+              "id": "19919cf2-ea11-42e4-af00-981fbec5c423",
+              "name": "category",
+              "value": "={{ $('条件分支').item.json.aiAnalysis.category }}",
+              "type": "string"
+            },
+            {
+              "id": "7c0b8fd3-0aae-44b9-97c2-b7e7923300b9",
+              "name": "summary",
+              "value": "={{ $('条件分支').item.json.aiAnalysis.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "cc15c70a-ed9a-47f2-8e8e-4d6fd8cca3b7",
+              "name": "received_at",
+              "value": "={{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}",
+              "type": "string"
+            },
+            {
+              "id": "3ffadd44-bd7b-4b18-8941-fbae00d88b00",
+              "name": "ticket_id",
+              "value": "={{ $('条件分支').item.json.ticket_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4cbbbe6e-8679-461d-b4ae-1b3a004f5242",
+              "name": "action_required",
+              "value": "={{ $('条件分支').item.json.action_required }}",
+              "type": "string"
+            },
+            {
+              "id": "8933d27c-bcab-4d67-a305-e5708b9252a4",
+              "name": "auto_replied",
+              "value": "={{ $json.auto_replied }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        384
+      ],
+      "id": "28ad6d57-2122-4f41-a288-16acbdadad70",
+      "name": "配置多维表格ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.feishu.cn/open-apis/im/v1/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "receive_id_type",
+              "value": "chat_id"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('获取飞书Token').item.json.tenant_access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"receive_id\":\"oc_16172b556a1feeb6879b78593e3ae33d\",\n    \"msg_type\": \"post\",\n    \"content\":\"{\\\"zh_cn\\\":{\\\"title\\\":\\\"常规工单\\\",\\\"content\\\":[[{\\\"tag\\\":\\\"at\\\",\\\"user_id\\\":\\\"\\\",\\\"user_name\\\":\\\"所有人\\\"}],[{\\\"tag\\\":\\\"md\\\",\\\"text\\\":\\\"**工单ID**:{{ $('条件分支').item.json.ticket_id }}\\\\\\n **接收时间**:{{ DateTime.fromISO($('条件分支').item.json.received_at).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}\\\\\\n **工单来源**:{{ $('条件分支').item.json.originalData.source }}\\\\\\n **客户姓名**:{{ $('条件分支').item.json.originalData.customer_name }}\\\\\\n **客户邮箱**:{{ $('条件分支').item.json.originalData.customer_email }}\\\\\\n **问题分类**:{{ $('条件分支').item.json.originalData.issue_title }}\\\\\\n **问题描述**:{{ $('条件分支').item.json.originalData.issue_description }}\\\"}]]}}\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        384
+      ],
+      "id": "ef17c145-b3cd-4737-b0db-c10fcbbccbe8",
+      "name": "向群组发送常规工单信息"
+    },
+    {
+      "parameters": {
+        "fromEmail": "364069771@qq.com",
+        "toEmail": "yb364069771@gmail.com",
+        "subject": "工单回复",
+        "html": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        576,
+        672
+      ],
+      "id": "d6c3c7fd-4c8e-4e22-a908-ab8f0923db7e",
+      "name": "自动给客户发送邮件",
+      "webhookId": "9e2edde1-ecfc-4f62-89ea-6de7474104fd",
+      "credentials": {
+        "smtp": {
+          "id": "J2SqCJ75kufiqXQa",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:9380/api/v1/retrieval",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "ragflow-bYw6Y5nzZzZJ-Z59Zu2SvMfoQlm738CjhYHGETnnS6k"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"dataset_ids\": [\n    \"fcc34ecc68c311f1827a9b6ee29d737f\"\n  ],\n  \"question\": \"{{ $json.originalData.issue_title }} {{ $json.originalData.issue_description }}\",\n  \"top_k\": 5,\n  \"similarity_threshold\": 0.3,\n  \"page\": 1,\n  \"page_size\": 10\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -80,
+        672
+      ],
+      "id": "c6406317-6b31-44cd-9701-853c15e91a01",
+      "name": "ragflow知识库检索"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nreturn [{\n  json: {\n    '=== 原始 AI 输出 ===': data.aiAnalysis,\n    'can_be_auto_replied 值': data.aiAnalysis?.can_be_auto_replied,\n    'can_be_auto_replied 类型': typeof data.aiAnalysis?.can_be_auto_replied,\n    'urgency 值': data.aiAnalysis?.true_urgency,\n    'category 值': data.aiAnalysis?.category,\n    'sentiment 值': data.aiAnalysis?.sentiment,\n    'requires_immediate 值': data.aiAnalysis?.requires_immediate_human_intervention,\n    '=== 决策结果 ===': {\n      action_required: data.action_required,\n      action_reason: data.action_reason\n    },\n    '=== 完整数据 ===': data\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        688
+      ],
+      "id": "a0c98636-83fd-427d-bae5-456a89dd2549",
+      "name": "综合决策完整输出"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一个友好的客户支持代表。请为这个咨询问题生成温暖专业的回复。\n\n客户信息：\n姓名：{{ $('接收POST请求').item.json.body.customer_name }}\n问题：{{ $('接收POST请求').item.json.body.issue_title }}\n详细描述：{{ $('接收POST请求').item.json.body.issue_description }}\n\n=== 知识库检索内容（必须优先使用）===\n{{ $json.knowledge_context }}\n=== 知识库内容结束 ===\n\n回答要求：\n1. **必须优先使用上方【知识库检索内容】中的信息**来解答客户问题\n2. 如果知识库中有明确答案，给出具体步骤和解决方案\n3. 如果知识库内容与问题不相关，诚实告知客户并说明会进一步核实\n4. 语气友好专业，使用清晰的编号列表\n5. 告知大致处理时间\n6. 在结尾表达继续提供帮助的意愿\n\n请直接生成 HTML 格式的回复内容，不要添加额外代码说明。",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        272,
+        672
+      ],
+      "id": "aebdebda-7306-450c-8786-58345b6502be",
+      "name": "AI自动回复生成1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen-max",
+          "mode": "list",
+          "cachedResultName": "qwen-max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        272,
+        848
+      ],
+      "id": "0faa3767-2fd1-4129-b8ed-a5213de25144",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "gg9OGckxEDin7Mbe",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 获取用户问题\nconst originalData = $input.first().json.originalData || {};\nconst question = (originalData.issue_title + ' ' + originalData.issue_description).toLowerCase();\n\n// 获取检索结果\nconst chunks = $input.first().json.data?.chunks || [];\n\n// 提取问题关键词\nconst keywords = {\n  password: ['密码', 'password', '重置', 'reset', '忘记', 'forgot', '登录'],\n  register: ['注册', '开户', 'account', '邮箱'],\n  payment: ['支付', '付款', '发票', '账单', '退款'],\n  // 根据常见问题扩展\n};\n\n// 自动检测问题类型\nlet questionType = 'general';\nfor (const [type, words] of Object.entries(keywords)) {\n  if (words.some(w => question.includes(w))) {\n    questionType = type;\n    break;\n  }\n}\n\n// 智能提取相关段落\nfunction extractRelevantSection(content, type) {\n  // 按章节分割\n  const sections = content.split(/(?=^##|^###)/m);\n  \n  // 根据问题类型筛选相关章节\n  const relevantSections = sections.filter(section => {\n    if (type === 'password') {\n      return section.includes('密码') || section.includes('登录') || section.includes('重置');\n    }\n    if (type === 'register') {\n      return section.includes('注册') || section.includes('账户');\n    }\n    // 默认返回前 300 字符\n    return true;\n  });\n  \n  // 返回相关章节，限制长度\n  return relevantSections.slice(0, 2).map(s => s.trim()).join('\\n\\n').substring(0, 800);\n}\n\n// 构建知识库上下文（只取最相关的 3 个 chunk 的相关段落）\nconst knowledgeContext = chunks.slice(0, 5).map((chunk, i) => {\n  const relevantContent = extractRelevantSection(chunk.content, questionType);\n  return `【知识库参考 ${i+1}】来源：${chunk.document_keyword}\n相似度：${(chunk.similarity * 100).toFixed(1)}%\n内容：${relevantContent || chunk.content.substring(0, 400)}\n---`;\n}).filter((_, i) => i < 3).join('\\n\\n');\n\n// 判断检索质量\nconst hasKnowledge = chunks.length > 0 && chunks[0]?.similarity > 0.35;\n\nconsole.log(' 问题类型:', questionType);\nconsole.log('📚 Chunks 数量:', chunks.length);\nconsole.log('✅ 最高相似度:', chunks[0]?.similarity?.toFixed(3));\n\nreturn [{\n  json: {\n    originalData: originalData,\n    knowledge_context: knowledgeContext,\n    has_knowledge: hasKnowledge,\n    chunks_count: chunks.length,\n    top_similarity: chunks[0]?.similarity || 0,\n    question_type: questionType\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        672
+      ],
+      "id": "b9799a81-85b3-45f5-a9d9-6948085e4211",
+      "name": "预处理知识库数据"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"sentiment\": \"angry\",\n  \"true_urgency\": \"critical\", \n  \"category\": \"billing\",\n  \"summary\": \"客户支付成功但订单状态未更新，导致重复付款\",\n  \"requires_immediate_human_intervention\": true,\n  \"can_be_auto_replied\": true\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -672,
+        592
+      ],
+      "id": "bbfe8a22-1128-4c92-8a9b-be184402efb5",
+      "name": "结构化输出"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一个客户支持工单分析系统。分析以下工单并返回 JSON：\n\n工单标题：{{ $('接收POST请求').item.json.body.issue_title }}\n工单描述：{{ $('接收POST请求').item.json.body.issue_description }}\n客户信息：{{ $('接收POST请求').item.json.body.customer_name }}\n\n输出要求（必须遵守）：\n1. 只返回 JSON，不要任何其他文字\n2. 必须包含以下 6 个字段，缺一不可\n3. 布尔值写 true 或 false，不要写 \"true\" 或 \"false\"\n\n输出格式：\n{\n  \"sentiment\": \"positive 或 neutral 或 negative 或 angry\",\n  \"true_urgency\": \"critical 或 high 或 medium 或 low\",\n  \"category\": \"billing 或 technical 或 bug 或 general\",\n  \"summary\": \"一句话总结\",\n  \"requires_immediate_human_intervention\": true 或 false,\n  \"can_be_auto_replied\": true 或 false\n}\n\n判断规则：\n- can_be_auto_replied = true：询问操作方法、步骤、价格、功能等ai可以自动回复的常规问题\n- can_be_auto_replied = false：账户异常、支付失败、数据丢失、投诉、退款、情绪愤怒",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -848,
+        384
+      ],
+      "id": "59140cbf-50cf-458b-8009-80a08cc1c0d3",
+      "name": "AI工单情况及用户情感分析"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI工单情况及用户情感分析",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "接收POST请求": {
+      "main": [
+        [
+          {
+            "node": "获取飞书Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "综合决策处理": {
+      "main": [
+        [
+          {
+            "node": "条件分支",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "综合决策完整输出",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "条件分支": {
+      "main": [
+        [
+          {
+            "node": "AI解决方案生成",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "等待2小时",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ragflow知识库检索",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI解决方案生成",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI解决方案生成": {
+      "main": [
+        [
+          {
+            "node": "压缩并转义",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取飞书Token": {
+      "main": [
+        [
+          {
+            "node": "AI工单情况及用户情感分析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "等待2小时": {
+      "main": [
+        [
+          {
+            "node": "向群组发送常规工单信息",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "处理状态:待处理": {
+      "main": [
+        [
+          {
+            "node": "配置多维表格ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "处理状态:已自动回复": {
+      "main": [
+        [
+          {
+            "node": "配置多维表格ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "压缩并转义": {
+      "main": [
+        [
+          {
+            "node": "向群组发送紧急工单信息",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "向群组发送紧急工单信息": {
+      "main": [
+        [
+          {
+            "node": "处理状态:待处理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "配置多维表格ID": {
+      "main": [
+        [
+          {
+            "node": "新增记录到表格",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "向群组发送常规工单信息": {
+      "main": [
+        [
+          {
+            "node": "处理状态:待处理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "自动给客户发送邮件": {
+      "main": [
+        [
+          {
+            "node": "处理状态:已自动回复",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ragflow知识库检索": {
+      "main": [
+        [
+          {
+            "node": "预处理知识库数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI自动回复生成1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "预处理知识库数据": {
+      "main": [
+        [
+          {
+            "node": "AI自动回复生成1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI自动回复生成1": {
+      "main": [
+        [
+          {
+            "node": "自动给客户发送邮件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "结构化输出": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI工单情况及用户情感分析",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI工单情况及用户情感分析": {
+      "main": [
+        [
+          {
+            "node": "综合决策处理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f6c0c4fb-bc37-4610-afe3-863f452a8d28",
+  "meta": {
+    "instanceId": "70b618c5c2521d53f3b69ab3ec344920ef7142dda7d15d239ec6ff5dba2ea8d5"
+  },
+  "nodeGroups": [],
+  "id": "4USYBcOdfLHL0fTp",
+  "tags": []
+}
