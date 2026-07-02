@@ -1,0 +1,498 @@
+{
+  "meta": {
+    "name": "AI工单分诊评估数据集 v1.0",
+    "description": "用于评估工单情感分析、紧急度判断、分类、决策路由和自动回复质量的标注测试集",
+    "created_at": "2026-07-02",
+    "total_cases": 24
+  },
+  "test_cases": [
+    {
+      "id": "URG-001",
+      "scenario": "urgent",
+      "description": "支付成功但订单未更新，客户情绪愤怒",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "张三",
+        "customer_email": "zhang@example.com",
+        "issue_title": "支付问题",
+        "issue_description": "我支付成功了但是订单没有更新，这让我很着急！"
+      },
+      "expected": {
+        "sentiment": "angry",
+        "true_urgency": "critical",
+        "category": "billing",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "URG-002",
+      "scenario": "urgent",
+      "description": "账户被盗用，客户非常恐慌",
+      "input": {
+        "source": "客服电话",
+        "customer_name": "李四",
+        "customer_email": "li@example.com",
+        "issue_title": "账户安全问题",
+        "issue_description": "我的账号被人盗用了，里面的钱被转走了，赶快帮我处理！"
+      },
+      "expected": {
+        "sentiment": "angry",
+        "true_urgency": "critical",
+        "category": "bug",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "URG-003",
+      "scenario": "urgent",
+      "description": "服务宕机影响工作，客户语气不满",
+      "input": {
+        "source": "邮件",
+        "customer_name": "王五",
+        "customer_email": "wang@company.com",
+        "issue_title": "系统完全无法访问",
+        "issue_description": "从今天早上9点开始就一直登录不上去，公司几十个人都在等着用，严重影响业务了！"
+      },
+      "expected": {
+        "sentiment": "negative",
+        "true_urgency": "critical",
+        "category": "technical",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "URG-004",
+      "scenario": "urgent",
+      "description": "数据丢失，要求立即恢复",
+      "input": {
+        "source": "公众号",
+        "customer_name": "赵六",
+        "customer_email": "zhao@example.com",
+        "issue_title": "重要数据丢失",
+        "issue_description": "刚刚编辑了半小时的文档突然消失了，能帮我恢复吗？里面是很重要的客户资料！"
+      },
+      "expected": {
+        "sentiment": "negative",
+        "true_urgency": "high",
+        "category": "bug",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "NOR-001",
+      "scenario": "normal",
+      "description": "功能异常但不紧急",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "孙七",
+        "customer_email": "sun@example.com",
+        "issue_title": "导出功能异常",
+        "issue_description": "导出报表时提示错误，不过我可以先手动记录，不着急。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "bug",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "NOR-002",
+      "scenario": "normal",
+      "description": "状态更新延迟，客户表示不急",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "南哥",
+        "customer_email": "test@example.com",
+        "issue_title": "技术问题",
+        "issue_description": "发现状态更新不及时，不过这不是很重要。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "technical",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "NOR-003",
+      "scenario": "normal",
+      "description": "希望增加新功能",
+      "input": {
+        "source": "邮件",
+        "customer_name": "周八",
+        "customer_email": "zhou@example.com",
+        "issue_title": "希望能增加批量导入功能",
+        "issue_description": "目前系统只能单条录入，希望能增加Excel批量导入功能，方便我们日常使用。谢谢！"
+      },
+      "expected": {
+        "sentiment": "positive",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "NOR-004",
+      "scenario": "normal",
+      "description": "报告一个偶发bug，语气中性",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "吴九",
+        "customer_email": "wu@example.com",
+        "issue_title": "偶尔出现白屏",
+        "issue_description": "使用过程中偶尔会出现白屏，刷新后恢复正常，频率大概是每天1-2次。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "bug",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "NOR-005",
+      "scenario": "normal",
+      "description": "账单疑问，语气平静",
+      "input": {
+        "source": "邮件",
+        "customer_name": "郑十",
+        "customer_email": "zheng@example.com",
+        "issue_title": "本月账单金额疑问",
+        "issue_description": "我查了一下这个月的账单，发现比上个月多了50元，能帮我查一下是为什么吗？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "billing",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "REP-001",
+      "scenario": "auto_reply",
+      "description": "询问如何进行支付操作",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "南哥",
+        "customer_email": "test@example.com",
+        "issue_title": "普通问题",
+        "issue_description": "如何进行支付。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-002",
+      "scenario": "auto_reply",
+      "description": "询问如何重置密码",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "陈一",
+        "customer_email": "chen@example.com",
+        "issue_title": "忘记密码",
+        "issue_description": "我忘记了登录密码，请问怎么重置？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-003",
+      "scenario": "auto_reply",
+      "description": "询问会员等级权益",
+      "input": {
+        "source": "公众号",
+        "customer_name": "刘二",
+        "customer_email": "liu@example.com",
+        "issue_title": "会员权益",
+        "issue_description": "我想了解一下不同会员等级的区别和对应的权益有哪些？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-004",
+      "scenario": "auto_reply",
+      "description": "询问支持哪些支付方式",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "黄三",
+        "customer_email": "huang@example.com",
+        "issue_title": "支付方式",
+        "issue_description": "请问你们支持支付宝支付吗？还支持哪些付款方式？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-005",
+      "scenario": "auto_reply",
+      "description": "询问营业时间",
+      "input": {
+        "source": "邮件",
+        "customer_name": "林四",
+        "customer_email": "lin@example.com",
+        "issue_title": "客服工作时间",
+        "issue_description": "请问你们的客服是24小时在线的吗？周末有人工客服吗？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-006",
+      "scenario": "auto_reply",
+      "description": "询问如何修改个人信息",
+      "input": {
+        "source": "小程序",
+        "customer_name": "马五",
+        "customer_email": "ma@example.com",
+        "issue_title": "修改个人资料",
+        "issue_description": "我想修改我的手机号和邮箱地址，在哪里可以改？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "REP-007",
+      "scenario": "auto_reply",
+      "description": "询问如何注销账户",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "高六",
+        "customer_email": "gao@example.com",
+        "issue_title": "账户注销",
+        "issue_description": "请问如何注销我的账户？注销后数据还会保留吗？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "EDG-001",
+      "scenario": "edge",
+      "description": "所有字段为空，测试系统容错",
+      "input": {
+        "source": "",
+        "customer_name": "",
+        "customer_email": "",
+        "issue_title": "",
+        "issue_description": ""
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "EDG-002",
+      "scenario": "edge",
+      "description": "超长文本压力测试",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "用户A_测试用户_非常长的名字_abcdefghijklmnopqrstuvwxyz_0123456789",
+        "customer_email": "very.long.email.address.for.testing.purposes.abcdefghijklmnopqrstuvwxyz@extremely-long-domain-name.example.com",
+        "issue_title": "这是一个非常非常非常非常非常非常非常非常非常非常非常长的测试问题标题用于验证系统文本处理能力",
+        "issue_description": "这是一个用于测试系统在处理大量文本输入时表现的超长工单描述。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。这段内容包含大量重复文字用于增加文本长度。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "EDG-003",
+      "scenario": "edge",
+      "description": "包含特殊字符和注入尝试",
+      "input": {
+        "source": "API接口",
+        "customer_name": "<script>alert('xss')</script>测试用户",
+        "customer_email": "test'; DROP TABLE users;--@example.com",
+        "issue_title": "问题'\"`<>&特殊字符测试",
+        "issue_description": "测试特殊字符: !@#$%^&*()_+-=[]{}|;':\",./<>?`~\nSQL注入测试: ' OR 1=1 --\nXSS测试: <img src=x onerror=alert(1)>\n换行符测试\n第二行\n第三行"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    },
+    {
+      "id": "EDG-004",
+      "scenario": "edge",
+      "description": "情绪激动包含脏话，测试边界情况",
+      "input": {
+        "source": "客服电话",
+        "customer_name": "愤怒的用户",
+        "customer_email": "angry@example.com",
+        "issue_title": "账号被盗",
+        "issue_description": "你们这是什么垃圾服务！我账号里面的钱全部不见了！我要投诉你们！立刻给我解决！否则我就去消费者协会告你们！听到没有！马上处理！"
+      },
+      "expected": {
+        "sentiment": "angry",
+        "true_urgency": "critical",
+        "category": "bug",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "MIX-001",
+      "scenario": "mixed",
+      "description": "问题很紧急但语气礼貌，测试是否过度依赖情感判断",
+      "input": {
+        "source": "邮件",
+        "customer_name": "礼貌客户",
+        "customer_email": "polite@example.com",
+        "issue_title": "服务器故障请求紧急支援",
+        "issue_description": "您好，我们的服务器似乎出现了故障，已经持续2小时无法访问，影响了大量客户。请问能否尽快帮忙排查处理？非常感谢！"
+      },
+      "expected": {
+        "sentiment": "positive",
+        "true_urgency": "high",
+        "category": "technical",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "MIX-002",
+      "scenario": "mixed",
+      "description": "内容看起来紧急但实际是咨询，测试能否区分",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "小白用户",
+        "customer_email": "newbie@example.com",
+        "issue_title": "紧急！我不会操作",
+        "issue_description": "紧急！我登录了系统但是完全不知道怎么用，每个按钮都点了一遍也没搞明白，请问有操作手册吗？"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "low",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": true,
+        "action_required": "auto_reply",
+        "reply_quality_min": 3
+      }
+    },
+    {
+      "id": "MIX-003",
+      "scenario": "mixed",
+      "description": "退款投诉但语气平静",
+      "input": {
+        "source": "网站表单",
+        "customer_name": "理性用户",
+        "customer_email": "rational@example.com",
+        "issue_title": "申请退款",
+        "issue_description": "我于上周购买的高级会员，但发现功能不符合预期，按照你们的退款政策应该在7天内可以退款。请帮我处理退款申请。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "billing",
+        "requires_immediate_human_intervention": true,
+        "can_be_auto_replied": false,
+        "action_required": "urgent"
+      }
+    },
+    {
+      "id": "MIX-004",
+      "scenario": "mixed",
+      "description": "多个问题混杂在一个工单中",
+      "input": {
+        "source": "邮件",
+        "customer_name": "多头客户",
+        "customer_email": "multi@example.com",
+        "issue_title": "多个问题咨询",
+        "issue_description": "我有几个问题：1. 如何更改订阅计划？2. 账单地址怎么修改？3. 我昨天遇到了一个bug，页面一直加载中。麻烦一起回复，谢谢。"
+      },
+      "expected": {
+        "sentiment": "neutral",
+        "true_urgency": "medium",
+        "category": "general",
+        "requires_immediate_human_intervention": false,
+        "can_be_auto_replied": false,
+        "action_required": "normal"
+      }
+    }
+  ]
+}

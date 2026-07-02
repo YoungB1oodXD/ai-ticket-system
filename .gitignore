@@ -45,6 +45,12 @@ yarn-error.log*
 # Use the template version (ticket-workflow.template.json) instead
 workflow/7x24小时ai工单分诊自动化工作流.json
 
+# Local evaluation config (contains API keys)
+scripts/evaluate-config.local.json
+
+# Evaluation reports (auto-generated)
+tests/reports/
+
 # ====================
 # Testing
 # ====================
