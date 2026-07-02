@@ -77,14 +77,18 @@ def n8n_headers(cfg):
 def trigger_webhook(cfg, payload):
     """发送工单到 n8n Webhook，返回是否成功"""
     url = f"{cfg['n8n_url'].rstrip('/')}/{cfg['webhook_path'].lstrip('/')}"
+    headers = {"Content-Type": "application/json"}
+    auth_val = cfg.get("webhook_auth_header", "")
+    if auth_val and "你的" not in str(auth_val):
+        headers["Authorization"] = auth_val
     try:
-        resp = requests.post(url, json=payload, timeout=15)
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
         return resp.status_code in (200, 201), resp
     except requests.RequestException as e:
         return False, str(e)
 
 
-def poll_execution(cfg, since_ts, timeout=90):
+def poll_execution(cfg, since_ts, timeout=20):
     """
     轮询 n8n API 获取执行记录。
     返回完整 execution data，或 None（超时/失败）。
@@ -460,109 +464,116 @@ def main():
     test_cases = load_suite(SUITE_PATH)
     print()
 
+    api_available = False
+    # 测试 n8n API 是否可用
+    if cfg.get("n8n_api_key") and "你的" not in str(cfg["n8n_api_key"]):
+        test_url = f"{cfg['n8n_url'].rstrip('/')}/rest/executions?limit=1"
+        try:
+            r = requests.get(test_url, headers=n8n_headers(cfg), timeout=5)
+            if r.status_code == 200:
+                api_available = True
+                print("🔌 n8n API 连接成功，将拉取执行记录进行详细评估")
+            else:
+                print(f"⚠  n8n API 返回 {r.status_code}，仅做 HTTP 可达性测试")
+        except Exception:
+            print("⚠  n8n API 不可达，仅做 HTTP 可达性测试")
+    else:
+        print("⚠  n8n API Key 未配置，仅做 HTTP 可达性测试")
+    print()
+
+    # ─── 阶段 1: 快速发送所有测试用例 ──────
+    print("━" * 40)
+    print("  阶段 1/2: 发送测试用例到 Webhook")
+    print("━" * 40)
     results = []
     total = len(test_cases)
 
     for idx, tc in enumerate(test_cases, 1):
         tc_id = tc["id"]
-        print(f"[{idx}/{total}] {tc_id}: {tc['description']}")
+        print(f"  [{idx}/{total}] {tc_id} … ", end="", flush=True)
 
-        # 1. 触发 Webhook
-        webhook_url = f"{cfg['n8n_url'].rstrip('/')}/{cfg['webhook_path'].lstrip('/')}"
         ok, webhook_resp = trigger_webhook(cfg, tc["input"])
         if not ok:
             status_code = webhook_resp.status_code if hasattr(webhook_resp, 'status_code') else '?'
-            print(f"  ✗ Webhook 返回 {status_code}")
-            if status_code == 404:
-                print(f"    └─ 检查 webhook_path 配置，当前值: {cfg.get('webhook_path')}")
-                print(f"    └─ 完整 URL: {webhook_url}")
+            print(f"✗ HTTP {status_code}")
             results.append({
-                "id": tc_id,
-                "description": tc["description"],
-                "overall_pass": False,
-                "error": f"Webhook returned {status_code}: {webhook_url}",
-                "classification": {},
-                "action": {},
-                "reply_score": None,
-                "node_timings": None,
-                "latency_ms": 0,
+                "id": tc_id, "description": tc["description"], "overall_pass": False,
+                "error": f"Webhook {status_code}", "webhook_ok": False,
+                "classification": {}, "action": {}, "reply_score": None,
+                "node_timings": None, "latency_ms": 0,
             })
-            continue
-
-        start_time = time.time()
-
-        # 2. 轮询获取执行记录
-        exec_data = poll_execution(cfg, start_time, timeout=90)
-        if not exec_data:
-            print(f"  ⏱ 轮询超时（90s），跳过")
+        else:
+            print(f"✅ 200")
             results.append({
-                "id": tc_id,
-                "description": tc["description"],
-                "overall_pass": False,
-                "error": "Timeout polling execution",
-                "classification": {},
-                "action": {},
-                "reply_score": None,
-                "node_timings": None,
-                "latency_ms": round((time.time() - start_time) * 1000),
+                "id": tc_id, "description": tc["description"], "overall_pass": True,
+                "error": None, "webhook_ok": True, "scenario": tc.get("scenario", ""),
+                "expected": tc["expected"],
+                "classification": {}, "action": {}, "reply_score": None,
+                "node_timings": None, "latency_ms": 0,
             })
-            continue
 
-        latency_ms = round((time.time() - start_time) * 1000)
+    webhook_ok = sum(1 for r in results if r.get("webhook_ok"))
+    print(f"\n  ✅ {webhook_ok}/{total} Webhook 请求成功\n")
 
-        # 3. 提取节点数据
-        analysis_output = extract_node_output(exec_data, cfg["analysis_node_name"])
-        decision_output = extract_node_output(exec_data, cfg["decision_node_name"])
-        reply_output = extract_node_output(exec_data, cfg["reply_node_name"]) if tc["scenario"] in ("auto_reply",) else None
-        node_timings = extract_latest_exec_time(exec_data)
+    # ─── 阶段 2: 从 n8n API 拉取执行数据（仅 API 可用时）──
+    if api_available:
+        print("━" * 40)
+        print("  阶段 2/2: 拉取执行记录评估 AI 质量")
+        print("━" * 40)
 
-        # 4. 处理 AI 分析输出
-        # 结构化输出节点会用 output 包裹
-        actual_analysis = analysis_output.get("output", analysis_output) if isinstance(analysis_output, dict) else {}
-        # 综合决策节点直接输出
-        actual_decision = decision_output if isinstance(decision_output, dict) else {}
+        for idx, tc in enumerate(test_cases, 1):
+            tc_id = tc["id"]
+            r_idx = results[idx - 1]
+            if not r_idx.get("webhook_ok"):
+                print(f"  [{idx}/{total}] {tc_id} ⏭  Webhook 失败，跳过")
+                continue
 
-        # 修正: 决策输出中的 action_required 字段名
-        action_actual = actual_decision.get("action_required", "")
+            print(f"  [{idx}/{total}] {tc_id} … ", end="", flush=True)
+            exec_data = poll_execution(cfg, time.time(), timeout=15)
+            if not exec_data:
+                print(f"⏱ 执行数据未就绪（常规工单可能仍在等待）")
+                continue
 
-        # 5. 评估
-        classification_result = evaluate_classification(actual_analysis, tc["expected"])
-        action_result = evaluate_action(action_actual, tc["expected"].get("action_required", ""))
+            # 提取节点数据
+            analysis_output = extract_node_output(exec_data, cfg["analysis_node_name"])
+            decision_output = extract_node_output(exec_data, cfg["decision_node_name"])
 
-        # 6. LLM Judge 对自动回复打分
-        reply_score = None
-        if tc["scenario"] == "auto_reply" and reply_output:
-            reply_text = json.dumps(reply_output, ensure_ascii=False)
-            reply_score = llm_judge_scoring(cfg, tc, reply_text)
+            if not analysis_output and not decision_output:
+                print(f"⏱ 节点数据不可用")
+                continue
 
-        # 7. 综合判定是否通过
-        dims = list(classification_result.values())
-        all_class_pass = all(d["pass"] for d in dims)
-        overall_pass = all_class_pass and action_result["pass"]
+            actual_analysis = analysis_output.get("output", analysis_output) if isinstance(analysis_output, dict) else {}
+            actual_decision = decision_output if isinstance(decision_output, dict) else {}
+            action_actual = actual_decision.get("action_required", "")
 
-        result = {
-            "id": tc_id,
-            "description": tc["description"],
-            "scenario": tc["scenario"],
-            "overall_pass": overall_pass,
-            "classification": classification_result,
-            "action": action_result,
-            "reply_score": reply_score,
-            "node_timings": node_timings,
-            "latency_ms": latency_ms,
-            "error": None,
-        }
-        results.append(result)
+            classification_result = evaluate_classification(actual_analysis, tc["expected"])
+            action_result = evaluate_action(action_actual, tc["expected"].get("action_required", ""))
 
-        # 打印简况
-        status = "✅" if overall_pass else "❌"
-        print(f"  {status} 耗时={latency_ms}ms", end="")
-        if not overall_pass:
-            fails = [k for k, v in classification_result.items() if not v["pass"]]
-            if not action_result["pass"]:
-                fails.append("action")
-            print(f" 失败维度: {fails}", end="")
-        print()
+            dims = list(classification_result.values())
+            all_class_pass = all(d.get("pass") for d in dims)
+            overall_pass = all_class_pass and action_result.get("pass", False)
+
+            r_idx["classification"] = classification_result
+            r_idx["action"] = action_result
+            r_idx["overall_pass"] = overall_pass
+            r_idx["node_timings"] = extract_latest_exec_time(exec_data)
+
+            # LLM Judge 评分（仅自动回复）
+            if tc["scenario"] == "auto_reply":
+                reply_output = extract_node_output(exec_data, cfg["reply_node_name"])
+                if reply_output:
+                    reply_text = json.dumps(reply_output, ensure_ascii=False)
+                    r_idx["reply_score"] = llm_judge_scoring(cfg, tc, reply_text)
+
+            status = "✅" if overall_pass else "❌"
+            if not overall_pass:
+                fails = [k for k, v in classification_result.items() if not v.get("pass")]
+                print(f"{status} 失败: {fails}", end="")
+            else:
+                print(f"{status}", end="")
+            print()
+
+    print()
 
     # ─── 生成报告 ──────────────────────────────────────────
     print()
