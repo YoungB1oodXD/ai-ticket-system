@@ -9,6 +9,7 @@
     <img src="https://img.shields.io/badge/status-production%20ready-brightgreen" alt="Status">
     <img src="https://img.shields.io/badge/AI-LLM%20Powered-purple?logo=openai" alt="AI">
     <img src="https://img.shields.io/badge/security-template%20based-green" alt="Security">
+    <img src="https://img.shields.io/badge/evaluation-LLM%20as%20Judge-blue" alt="Evaluation">
   </p>
 </div>
 
@@ -147,26 +148,72 @@
 
 ---
 
-## 🧪 测试 | Testing
+## 🧪 测试与评测 | Testing & Evaluation
 
-项目提供了两种测试方式：
+项目提供**三层测试体系**，覆盖从冒烟测试到 AI 质量评估的全链路。
 
-### 方式 1：批量测试脚本（推荐）
+### 层级 1：冒烟测试 — 快速验证 Webhook 连通性
 
 ```bash
 # 设置你的 n8n Webhook 地址
 export N8N_WEBHOOK_URL=http://localhost:5678/webhook-test/你的webhookID
 export N8N_AUTH_HEADER=你的认证头
 
-# 一键运行所有测试用例
+# 一键运行所有冒烟测试用例
 bash tests/run-tests.sh
 ```
 
-### 方式 2：Apifox 可视化测试
+### 层级 2：自动化评测 — LLM-as-Judge 量化 AI 质量
 
-> 项目提供了 Apifox 导出文件 `n8n测试.apifox.json`（位于项目根目录，已被 .gitignore 排除）
+基于 24 条标注测试数据集，通过 n8n API 拉取执行记录，自动比对 AI 输出与标准答案，并用 LLM Judge 对回复质量打分。
 
-### 测试覆盖场景
+```bash
+# 1. 配置评测凭证
+cp scripts/evaluate-config.json scripts/evaluate-config.local.json
+# 编辑 evaluate-config.local.json，填入 n8n API Key + LLM Judge Key
+
+# 2. 运行评测
+python scripts/evaluate.py
+
+# 3. 查看报告
+cat tests/reports/evaluation-report-最新.md
+```
+
+**评测流程：**
+```
+评测数据集 (24条标注工单)
+       │
+       ▼
+POST → n8n Webhook → 触发工作流
+       │
+       ▼
+n8n API 拉取执行记录 → 提取 AI 节点输出
+       │
+       ▼
+逐条比对标注答案 (情感/紧急度/分类/决策路由)
+       │
+       ▼
+LLM Judge 对自动回复质量打分 (1-5)
+       │
+       ▼
+生成 Markdown 评测报告
+```
+
+**评测维度与量化指标：**
+
+| 维度 | 评估内容 | 量化方式 |
+|------|---------|---------|
+| 情感分类准确率 | sentiment 判定 (positive/neutral/negative/angry) | % |
+| 紧急度分类准确率 | true_urgency 判定 (critical/high/medium/low) | % |
+| 问题分类准确率 | category 判定 (billing/technical/bug/general) | % |
+| 决策路由准确率 | action_required 三层分支是否正确 | % |
+| 自动回复质量 | 相关性 / 准确性 / 专业性 / 可操作性 | LLM Judge 1-5分 |
+
+### 层级 3：Apifox 可视化测试
+
+> 提供 Apifox 导出文件 `n8n测试.apifox.json`，可用于手动接口调试和可视化测试
+
+### 测试用例覆盖
 
 | 场景 | 文件 | 预期触发分支 |
 |------|------|-------------|
@@ -236,17 +283,21 @@ ai-ticket-system/
 ├── workflow/
 │   ├── ticket-workflow.template.json       # [推送到Git] 脱敏的工作流模板
 │   └── 7x24小时ai工单分诊自动化工作流.json  # [本地] 含真实凭证，被 gitignore
-├── tests/                                  # 轻量测试方案
+├── tests/                                  # 测试与评测
 │   ├── README.md                           # 测试使用说明
-│   ├── run-tests.sh                        # 批量测试脚本 (curl)
+│   ├── suite-evaluation.json               # 24条标注评测数据集
+│   ├── run-tests.sh                        # 冒烟测试脚本 (curl)
 │   ├── case-urgent.json                    # 测试用例：紧急工单
 │   ├── case-normal.json                    # 测试用例：常规工单
 │   ├── case-auto-reply.json                # 测试用例：自动回复
 │   ├── case-edge-empty.json                # 边界测试：空字段
 │   ├── case-edge-long-text.json            # 边界测试：超长文本
-│   └── case-edge-emotional.json            # 边界测试：情绪激动
-└── scripts/
-    └── generate_template.py                # 模板生成脚本
+│   ├── case-edge-emotional.json            # 边界测试：情绪激动
+│   └── reports/                            # 评测报告输出
+├── scripts/
+│   ├── generate_template.py                # 模板生成脚本
+│   ├── evaluate.py                         # LLM-as-Judge 自动化评测脚本
+│   └── evaluate-config.json                # 评测配置模板
 ```
 
 ---
