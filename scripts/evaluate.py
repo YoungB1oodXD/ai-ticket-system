@@ -38,7 +38,7 @@ def load_config():
             print(f"✗ 找不到配置文件: {CONFIG_PATH}")
         sys.exit(1)
 
-    with open(CONFIG_PATH) as f:
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
 
     # 校验必要字段
@@ -47,7 +47,16 @@ def load_config():
     if missing:
         print(f"✗ 配置缺少必要字段: {missing}")
         print(f"  请填写 {CONFIG_PATH}")
+        print(f"  当前值:")
+        for k in missing:
+            print(f"    {k} = {cfg.get(k)}")
         sys.exit(1)
+
+    # 校验 llm_judge
+    lj = cfg.get("llm_judge", {})
+    if not lj.get("api_key") or "你的" in str(lj.get("api_key", "")):
+        print("⚠  LLM Judge 未配置，自动回复质量打分将跳过")
+        print("   如果需要，请填写 llm_judge.api_key")
 
     return cfg
 
@@ -310,13 +319,17 @@ def generate_report(results, cfg):
 
     # 统计
     total = len(results)
-    passed = sum(1 for r in results if r["overall_pass"])
+    passed = sum(1 for r in results if r.get("overall_pass"))
     failed = total - passed
 
-    sentiment_accuracy = sum(1 for r in results if r["classification"]["sentiment"]["pass"]) / total * 100 if total else 0
-    urgency_accuracy = sum(1 for r in results if r["classification"]["true_urgency"]["pass"]) / total * 100 if total else 0
-    category_accuracy = sum(1 for r in results if r["classification"]["category"]["pass"]) / total * 100 if total else 0
-    action_accuracy = sum(1 for r in results if r["action"]["pass"]) / total * 100 if total else 0
+    # 只有有分类数据的条目才参与准确率计算
+    classified_results = [r for r in results if r.get("classification") and "sentiment" in r["classification"]]
+    classified_total = len(classified_results)
+
+    sentiment_accuracy = sum(1 for r in classified_results if r["classification"]["sentiment"].get("pass")) / classified_total * 100 if classified_total else 0
+    urgency_accuracy = sum(1 for r in classified_results if r["classification"]["true_urgency"].get("pass")) / classified_total * 100 if classified_total else 0
+    category_accuracy = sum(1 for r in classified_results if r["classification"]["category"].get("pass")) / classified_total * 100 if classified_total else 0
+    action_accuracy = sum(1 for r in classified_results if r["action"].get("pass")) / classified_total * 100 if classified_total else 0
 
     reply_scores = [r["reply_score"].get("overall", 0) for r in results if r.get("reply_score") and isinstance(r.get("reply_score"), dict) and "overall" in r["reply_score"]]
     avg_reply_score = round(sum(reply_scores) / len(reply_scores), 2) if reply_scores else 0
@@ -385,15 +398,21 @@ def generate_report(results, cfg):
         f"",
     ])
     for r in results:
-        if not r["overall_pass"]:
-            lines.append(f"### ❌ {r['id']}: {r['description']}")
+        if not r.get("overall_pass"):
+            lines.append(f"### ❌ {r.get('id','?')}: {r.get('description','')}")
             lines.append(f"")
+            if r.get("error"):
+                lines.append(f"**错误**: {r['error']}")
+                lines.append(f"")
+                continue
             lines.append(f"| 字段 | 实际值 | 期望值 | 结果 |")
             lines.append(f"|------|--------|--------|------|")
-            for dim, detail in r["classification"].items():
-                mark = "✅" if detail["pass"] else "❌"
-                lines.append(f"| {dim} | {detail['actual']} | {detail['expected']} | {mark} |")
-            lines.append(f"| action_required | {r['action']['actual']} | {r['action']['expected']} | {'✅' if r['action']['pass'] else '❌'} |")
+            if r.get("classification"):
+                for dim, detail in r["classification"].items():
+                    mark = "✅" if detail.get("pass") else "❌"
+                    lines.append(f"| {dim} | {detail.get('actual','?')} | {detail.get('expected','?')} | {mark} |")
+            if r.get("action"):
+                lines.append(f"| action_required | {r['action'].get('actual','?')} | {r['action'].get('expected','?')} | {'✅' if r['action'].get('pass') else '❌'} |")
             lines.append(f"")
 
     # 回复质量分布
@@ -449,14 +468,19 @@ def main():
         print(f"[{idx}/{total}] {tc_id}: {tc['description']}")
 
         # 1. 触发 Webhook
+        webhook_url = f"{cfg['n8n_url'].rstrip('/')}/{cfg['webhook_path'].lstrip('/')}"
         ok, webhook_resp = trigger_webhook(cfg, tc["input"])
         if not ok:
-            print(f"  ✗ Webhook 请求失败: {webhook_resp}")
+            status_code = webhook_resp.status_code if hasattr(webhook_resp, 'status_code') else '?'
+            print(f"  ✗ Webhook 返回 {status_code}")
+            if status_code == 404:
+                print(f"    └─ 检查 webhook_path 配置，当前值: {cfg.get('webhook_path')}")
+                print(f"    └─ 完整 URL: {webhook_url}")
             results.append({
                 "id": tc_id,
                 "description": tc["description"],
                 "overall_pass": False,
-                "error": f"Webhook failed: {webhook_resp}",
+                "error": f"Webhook returned {status_code}: {webhook_url}",
                 "classification": {},
                 "action": {},
                 "reply_score": None,
