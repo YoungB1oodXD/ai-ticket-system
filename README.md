@@ -31,6 +31,44 @@
 
 ---
 
+## 📸 工作流截图与飞书参考 | Workflow Screenshot & Feishu References
+
+<img src="./img.png" alt="Workflow Diagram" width="100%" />
+
+- [飞书多维表格](https://icn2g78kbfsx.feishu.cn/base/M4vPb58JRai48rsuqptc0fsfnFd?table=tbl2I41w7cP7bUrt&view=vew3XX0gZc)
+- [飞书多维表格的工单问题分析仪表盘](https://icn2g78kbfsx.feishu.cn/base/M4vPb58JRai48rsuqptc0fsfnFd?table=blk5GyB3hyvMM0Xc)
+
+### 飞书多维表格链接格式
+
+飞书多维表格链接通常使用以下格式：
+
+```text
+https://<租户>.feishu.cn/base/<app_token>?table=<table_id>&view=<view_id>
+```
+
+以本项目的多维表格链接为例：
+
+```text
+https://icn2g78kbfsx.feishu.cn/base/M4vPb58JRai48rsuqptc0fsfnFd?table=tbl2I41w7cP7bUrt&view=vew3XX0gZc
+```
+
+| 链接部分 | 对应配置项 | 本项目示例 |
+|------|------|------|
+| `/base/` 后的字符串 | `FEISHU_APP_TOKEN` | `M4vPb58JRai48rsuqptc0fsfnFd` |
+| `table=` 后的字符串 | `FEISHU_TABLE_ID` | `tbl2I41w7cP7bUrt` |
+| `view=` 后的字符串 | 视图 ID（当前工作流不直接使用） | `vew3XX0gZc` |
+
+配置到 `.env` 或工作流占位符时，只需填写 `app_token` 和 `table_id`：
+
+```env
+FEISHU_APP_TOKEN=M4vPb58JRai48rsuqptc0fsfnFd
+FEISHU_TABLE_ID=tbl2I41w7cP7bUrt
+```
+
+> 注意：请确保飞书应用已获得该多维表格的访问权限。分享链接中的真实 ID 和业务数据属于敏感信息，公开仓库或截图时请按需打码。
+
+---
+
 ## 🏗 工作流架构 | Workflow Architecture
 
 ```
@@ -84,11 +122,6 @@
                                     │ (标记已回复)  │
                                     └──────────────┘
 ```
-
-> 详细架构图：参考下方截图 👇
->
-> <img src="./img.png" alt="Workflow Diagram" width="100%" />
-
 ---
 
 ## 🚀 快速开始 | Quick Start
